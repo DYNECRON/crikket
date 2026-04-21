@@ -174,8 +174,12 @@ export const auth = betterAuth({
     enabled: true,
     storage: "database",
     window: MINUTE,
-    max: 100,
+    max: 1000,
     customRules: {
+      "/get-session": {
+        window: MINUTE,
+        max: 10_000,
+      },
       "/sign-in/email": {
         window: MINUTE,
         max: 5,
