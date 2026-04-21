@@ -27,7 +27,33 @@ type AuthClient<Option extends BetterAuthClientOptions> = ReturnType<
   typeof createAuthClient<Option>
 >
 
+// SSR forwards the incoming request headers (set via fetchOptions.headers) to
+// the auth API. Those headers include Host: <app-origin>, and when the app
+// and the API are on different subdomains behind the same nginx, the Host
+// override causes nginx to route the outbound fetch to the wrong vhost,
+// returning 404. Scrub hop-by-hop/host headers from every outgoing auth fetch.
+const HEADER_BLOCKLIST = new Set([
+  "host",
+  "connection",
+  "content-length",
+  "transfer-encoding",
+  "keep-alive",
+  "upgrade",
+  "proxy-authorization",
+  "te",
+  "trailer",
+])
+
 export const authClient: AuthClient<AuthClientOptions> = createAuthClient({
   baseURL: env.NEXT_PUBLIC_SERVER_URL,
+  fetchOptions: {
+    onRequest(context) {
+      const h = (context as { headers?: Headers }).headers
+      if (!h) return
+      for (const name of HEADER_BLOCKLIST) {
+        h.delete(name)
+      }
+    },
+  },
   plugins: [adminPlugin, emailOtpPlugin, organizationPlugin, polarPlugin],
 })
